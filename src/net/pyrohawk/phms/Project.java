@@ -92,17 +92,33 @@ public class Project implements Serializable{
 				
 				ObjectInputStream in = new ObjectInputStream(new FileInputStream(path));
 				list = (ArrayList<PHMSFile>)in.readObject();
+				System.out.println("Length: " + list.size());
+				PHMSFile[] lFiles = new PHMSFile[list.size()];
+				list.toArray(lFiles);
+				int i = 0;
 				
-				for (PHMSFile file : list) {
+				for (i = 0; i < lFiles.length; i++) {
 					
+					PHMSFile file = lFiles[i];
+					System.out.println("\n\t" + i + "\n");
 					file.setProject(this);
+					if (!file.authenticateFile()) {
+						file.setLastCommit("Initial Commit.");
+						System.out.println("Authenticating file: " + file.getFileName());
+						System.out.println("\t\t" + file.getProject().getProjectName());
+						System.out.println("\t\t" + file.getLastModified());
+						System.out.println(file.uploadFileInfo(true));
+					}
+					lFiles[i] = file;
+					System.out.println("Date:\t\t" + file.getLastModified());
+					System.out.println("Commit:\t\t" + file.getLastCommit());
 					
 				}
 				
 				return true;
 				
 			} catch (Exception e) {
-				
+				e.printStackTrace();
 			}
 		
 		}
@@ -114,9 +130,9 @@ public class Project implements Serializable{
 	private ArrayList<PHMSFile> getFileArrayList() {
 		// TODO Auto-generated method stub
 		ArrayList<PHMSFile> list = new ArrayList<PHMSFile>();
-		list.add(new PHMSFile(this, "fileOne"));
-		list.add(new PHMSFile(this, "fileTwo"));
-		list.add(new PHMSFile(this, "fileThree"));
+		list.add(new PHMSFile(this, "/fileOne.php"));
+		list.add(new PHMSFile(this, "/fileTwo.txt"));
+		list.add(new PHMSFile(this, "/fileThree.project"));
 		return list;
 	}
 

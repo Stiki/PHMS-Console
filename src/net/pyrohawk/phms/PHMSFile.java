@@ -1,5 +1,7 @@
 package net.pyrohawk.phms;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.io.*;
 import java.net.*;
@@ -21,18 +23,19 @@ public class PHMSFile implements Serializable {
 		lastModifiedLocal = new Date();
 	}
 	
-	public void uploadFileInfo(boolean uploadFile) {
+	public boolean uploadFileInfo(boolean uploadFile) {
 	
 		try {
 			
-			String queryString = "username=" + project.getUser().getUsername() + "&";
-			queryString += "password=" + project.getUser().getPassword() + "&";
-			queryString += "filename=" + fileName + "&";
-			queryString += "fileid=" + fileId + "&";
-			queryString += "lastmodified=" + lastModified + "&";
-			queryString += "lastcommit=" + lastCommit + "&";
-			queryString += "lastcommitid=" + lastCommitId + "&";
-			queryString += "project=" + project.getProjectName() + "";
+			String queryString = "username=" + URLEncoder.encode(project.getUser().getUsername()) + "&";
+			queryString += "password=" + URLEncoder.encode(project.getUser().getPassword()) + "&";
+			queryString += "filename=" + URLEncoder.encode(fileName) + "&";
+			queryString += "fileid=" + URLEncoder.encode("" + fileId) + "&";
+			queryString += "lastmodified=" + (lastModified == null ? "" : URLEncoder.encode("" + lastModified)) + "&";
+			queryString += "lastcommit=" + URLEncoder.encode(lastCommit) + "&";
+			queryString += "lastcommitid=" + URLEncoder.encode("" + lastCommitId) + "&";
+			queryString += "project=" + URLEncoder.encode(project.getProjectName()) + "";
+			//System.out.println(queryString);
 			URLConnection conn = (new URL(Project.ROOT_URL + "/file/update.php?" + queryString)).openConnection();
 			conn.setRequestProperty("User-agent", "Mozilla/5.0 (Windows NT 6.0) AppleWebKit/535.7 (KHTML, like Gecko) Chrome/16.0.912.21 Safari/535.7");
 			InputStream in = conn.getInputStream();
@@ -42,39 +45,53 @@ public class PHMSFile implements Serializable {
 				buffer += (char)bufferChar;
 			}
 			System.out.println(buffer);
+			JSONObject response = new JSONObject(buffer);
+			return response.getBoolean("accepted");
 			
 		} catch (Exception e) {
 			
 		}
 		
+		return false;
+		
 	}
 	
-	public void authenticatedFile() {
+	public boolean authenticateFile() {
 		
 		try {
 			
-			URLConnection conn = (new URL(Project.ROOT_URL + "/file/authenticate.php?filename=" + fileName + "&username=" + project.getUser().getUsername() + "&password=" + project.getUser().getPassword())).openConnection();
+			URLConnection conn = (new URL(Project.ROOT_URL + "/file/authenticate.php?filename=" + fileName + "&username=" + project.getUser().getUsername() + "&password=" + project.getUser().getPassword() + "&project=" + project.getProjectName())).openConnection();
 			conn.setRequestProperty("User-agent", "Mozilla/5.0 (Windows NT 6.0) AppleWebKit/535.7 (KHTML, like Gecko) Chrome/16.0.912.21 Safari/535.7");
+			System.out.println(conn.getURL().toString());
 			InputStream in = conn.getInputStream();
 			String buffer = "";
 			int bufferChar;
 			while ((bufferChar = in.read()) != -1) {
 				buffer += (char)bufferChar;
 			}
-			System.out.println(buffer);
+			System.out.println("auth: " + buffer);
 			JSONObject fileInfo = new JSONObject(buffer);
 			if (fileInfo.getBoolean("valid")) {
-				lastModified = new Date(fileInfo.getString("lastmodified"));
+				System.out.println("Valid");
+				SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+				System.out.println("Last Modified: " + fileInfo.getString("lastmodified"));
+				lastModified = (Date)f.parse(fileInfo.getString("lastmodified"));
 				lastCommit = fileInfo.getString("lastcommit");
 				fileName = fileInfo.getString("filename");
-				fileId = fileInfo.getInt("fileid");
+				fileId = fileInfo.getInt("id");
 			}
+			
+			return fileInfo.getBoolean("valid");
 			
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (JSONException e) {
 			e.printStackTrace();
+		} catch (ParseException e) {
+			e.printStackTrace();
 		}
+		
+		return false;
 		
 	}
 	
@@ -97,7 +114,15 @@ public class PHMSFile implements Serializable {
 	public void setFileName(String fileName) {
 		this.fileName = fileName;
 	}
+	
+	public String getLastCommit() {
+		return fileName;
+	}
 
+	public void setLastCommit(String commit) {
+		this.lastCommit = commit;
+	}
+	
 	public Date getLastModified() {
 		return lastModified;
 	}
